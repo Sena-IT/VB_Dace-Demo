@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>OpenAI Realtime Audio Transcription Demo</title>
+        <head>
+            <link rel="stylesheet"
+                href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+            <link href="https://fonts.googleapis.com/icon?family=Material+Icons"
+                rel="stylesheet">
+            <link
+                href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&display=swap"
+                rel="stylesheet">
+        </head>
+        <style>
+        body {
+            font-family:'Nunito Sans';
+            background-color: white;
+            color: #d1d5db;
+            margin: 0;
+            padding: 0;
+           width: 100%;
+           height: 100%;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: #292525;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(255, 255, 255, 0.518);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            color: #ffffff;
+            margin-bottom: 1rem;
+        }
+
+        .controls button {
+            font-size: 1rem;
+            padding: 0.5rem 1.5rem;
+            margin: 0.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #startButton {
+            background-color: #10a37f;
+            color: #ffffff;
+        }
+
+        #startButton:hover {
+            background-color: #128e72;
+        }
+
+        #stopButton {
+            background-color: #f44336;
+            color: #ffffff;
+        }
+
+        #stopButton:hover {
+            background-color: #d32f2f;
+        }
+
+        #stopButton:disabled {
+            background-color: #2f2f2f;
+            cursor: not-allowed;
+        }
+
+        .transcript-container {
+            background-color: #1e1e1f;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            height: 150px;
+            overflow-y: auto;
+        }
+
+        .status {
+            color: #10a37f;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+
+        .error {
+            color: #ffffff;
+            margin-top: 1rem;
+            display: none;
+        }
+
+
+
+
+        .wave {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(151, 152, 152, 0.3);
+            opacity: 0;
+            animation: waveAnimation 2s infinite ease-out;
+            top: 10px ;
+            right:0;
+            left: 10px;
+          
+            
+        }
+
+        .wave:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .wave:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .wave:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        @keyframes waveAnimation {
+            0% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+    </style>
+    </head>
+
+    <body>
+        <!-- <h1>Real-Time Audio Transcription with OpenAI</h1>
+        <div class="controls">
+            <button id="startButton">Start</button>
+            <button id="stopButton" disabled>Stop</button>
+        </div>
+        <div class="transcript-container">
+            <div id="transcript"></div>
+        </div>
+        <div id="status">Ready to start</div>
+        <div id="error" style="display: none;"></div> -->
+        <div class="flex flex-row items-center space-x-4 h-full p-5">
+            <div class="flex flex-col space-y-6 flex-1 w-3/4 h-full">
+
+                <div
+                    class="flex w-full items-center justify-center text-neutral-500 font-bold text-2xl h-[100px]">
+                    <h2>
+                        VB Dace Voice Assistant
+                    </h2>
+                </div>
+
+                <div
+                    class="flex-1 flex items-center justify-center min-h-[calc(100vh-250px)] w-full">
+                    <div
+                        class="w-[120px] h-[120px] rounded-full backdrop-blur-md bg-neutral-100/50 relative">
+                        <img
+                            src="https://cdn.shopify.com/s/files/1/0616/7222/6982/files/logo.png"
+                            class="w-full h-full object-contain z-10" />
+                        <div class="wave hidden"></div>
+                        <div class="wave hidden"></div>
+                        <div class="wave hidden"></div>
+                    </div>
+                </div>
+
+                <div
+                    class="w-full flex items-center justify-center ">
+                    <div
+                        class="flex flex-row items-center justify-between max-w-[300px] w-full mx-auto">
+
+                        <button id="play-btn" title="start"
+                            class="w-10 h-10 rounded-full bg-neutral-100/80 backdrop-blur-xl flex items-center justify-center">
+                            <span
+                                class="ml-0.5 text-lg text-neutral-500">&#9658;</span>
+                        </button>
+
+                        <button id="pause-btn" title="pause"
+                            class="w-10 h-10 rounded-full bg-neutral-100/80 backdrop-blur-xl flex items-center justify-center hidden">
+                            <span
+                                class="w-3 rounded-[2px] h-3 bg-red-600"></span>
+                        </button>
+
+                        <button title="mute" id="mute"
+                            class="w-10 h-10 rounded-full bg-neutral-100/80 backdrop-blur-xl flex items-center justify-center">
+                            <i
+                                class="fa fa-microphone text-lg text-neutral-600"></i>
+                        </button>
+                        <button title="unmute" id="unmute"
+                            class="w-10 h-10 rounded-full bg-neutral-100/80 backdrop-blur-xl flex items-center justify-center hidden">
+                            <i
+                                class='fa fa-microphone-slash text-lg text-red-600'></i>
+                        </button>
+
+                        <button id="show-transcription"
+                            title="show transcription"
+                            class="w-10 h-10 rounded-full bg-neutral-100/80 backdrop-blur-xl flex items-center justify-center">
+
+                            <i
+                                class="material-icons text-lg text-neutral-500">message</i>
+                        </button>
+
+                    </div>
+                </div>
+            </div>
+            <div
+                class="w-1/4 h-full bg-neutral-100/80 text-black rounded-xl px-3 py-12 overflow-y-auto text-[15px] text-medium relative"
+                id="transcription-container">
+                <button id="transcription-close"
+                    class="w-8 h-8 z-10 rounded-full bg-neutral-200/80 backdrop-blur-xl flex items-center justify-center absolute right-2 top-2">
+
+                    <i class="material-icons text-lg text-neutral-500">close</i>
+
+                </button>
+                <p id="transcription"></p>
+            </div>
+        </div>
+
+        <script src="https://cdn.tailwindcss.com"></script>
+        <script src='https://kit.fontawesome.com/a076d05399.js'
+            crossorigin='anonymous'></script>
+        <script>
+        
+        const startButton = document.getElementById('play-btn');
+        const stopButton = document.getElementById('pause-btn');
+        const transcriptionContainer=document.getElementById('transcription-container')
+        const showTranscription=document.getElementById('show-transcription')
+        const closeTranscription=document.getElementById('transcription-close')
+        //const transcriptionContainer = document.getElementById('transcript')
+        //const statusDiv = document.getElementById('status');
+        //const errorDiv = document.getElementById('error');
+        const aboutSenaButton = document.getElementById('aboutSenaButton');
+        const waveAnimation=document.querySelectorAll('.wave')
+        const transcription=document.getElementById('transcription')
+
+        const mute=document.getElementById('mute')
+        const unmute=document.getElementById('unmute')
+
+        let peerConnection = null;
+        let audioStream = null;
+        let dataChannel = null;
+        let isMuted = false;
+
+
+        function toggleMute() {
+            const track = audioStream.getTracks()[0];  
+
+            if (isMuted) {
+                // Unmute
+                track.enabled = true;
+                mute.classList.remove('hidden');
+                unmute.classList.add('hidden');
+                waveAnimation.forEach(wave => {
+                    wave.classList.toggle('hidden');
+                });
+            } else {
+                // Mute
+                track.enabled = false;
+                mute.classList.add('hidden');
+                unmute.classList.remove('hidden');
+                waveAnimation.forEach(wave => {
+                    wave.classList.add('hidden');
+                });
+
+            }
+
+            isMuted = !isMuted;
+        }
+    
+        function handleTranscript(message) {
+            if (message.response?.output?.[0]?.content?.[0]?.transcript) {
+                transcription.innerText += message.response.output[0].content[0].transcript + ' ';
+                closeTranscription.classList.remove('hidden')
+            }
+        }
+    
+
+        async function handleWeatherFunction(output) {
+            try {
+                const args = JSON.parse(output.arguments);
+                const location = args.location;
+                
+                const response = await fetch(`https://voice.sena.services/weather/${encodeURIComponent(location)}`);
+                const data = await response.json();
+                
+                sendFunctionOutput(output.call_id, {
+                    temperature: data.temperature,
+                    unit: data.unit,
+                    location: location
+                });
+                
+                sendResponseCreate();
+            } catch (error) {
+                //showError('Error handling weather function: ' + error.message);
+            }
+        }
+
+        async function triggerMail(){
+            response = await fetch(`https://voice.sena.services/sendMailAfterCall`);  
+            console.log('response from triggerMail()',response)
+        }
+    
+        async function handleAboutSenaFunction(output) {
+            try {
+                const args = JSON.parse(output.arguments);
+                const content = args.content;
+
+                console.log("handleAboutSenaFunction args",args)
+                console.log("handleAboutSenaFunction content",content)                
+                
+                const response = await fetch(`https://voice.sena.services/aboutsena/${encodeURIComponent(content)}`);
+                const data = await response.json();
+
+                console.log("response",response)
+                console.log("data",data)
+                
+                sendFunctionOutput(output.call_id, {
+                    Response : data.content || 'No data available'
+                });
+                
+                sendResponseCreate();
+
+            } catch (error) {
+                //showError('Error handling about SENA function: ' + error.message);
+            }
+        }
+
+        async function handleSendMailFunction(output) {
+            try {
+                const args = JSON.parse(output.arguments);
+                const content = args.emailId;
+
+                console.log("handleSendMailFunction args",args)
+                console.log("handleSendMailFunction content",content)                
+                
+                const response = await fetch(`https://voice.sena.services/sendMail/${encodeURIComponent(content)}`);
+                console.log("response",response)
+                const data = await response.json();    
+                console.log("data",data)            
+                
+                sendFunctionOutput(output.call_id, {
+                    about_sena: data.content || 'No data available'
+                });
+                
+                sendResponseCreate();
+            } catch (error) {
+                showError('Error handling about SENA function: ' + error.message);
+            }
+        }
+
+        function saveGPTResposeToBackEnd(message) {
+            if(message) {
+                const output = message.content?.[0]?.transcript;
+                console.log("saveGPTResposeToBackEnd msg",output)
+                fetch('https://voice.sena.services/save-transcription-gpt', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ "data": output }), // Send the transcription text in "data"
+                })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error('Failed to save GPT transcription');
+                    }
+                    console.log('GPT Transcription saved successfully');
+                })
+                .catch((error) => {
+                    console.error('Error saving GPT transcription:', error.message);
+                });
+            }   
+        }
+
+
+        function handleAudioTranscriptionComplete(message) {
+            try {
+                const transcription = message.transcript;
+                if (transcription) {
+                    console.log('Transcription completed:', transcription);
+                    transcription.textContent += transcription + ' ';
+
+                    fetch('https://voice.sena.services/save-transcription', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ transcription }),
+                    })
+                        .then((response) => {
+                            if (!response.ok) {
+                                throw new Error('Failed to save transcription');
+                            }
+                            console.log('Transcription saved successfully');
+                        })
+                        .catch((error) => {
+                            console.error('Error saving transcription:', error.message);
+                        });
+                } else {
+                    console.warn('No transcription text found in the message:', message);
+                }
+            } catch (error) {
+                console.error('Error handling audio transcription completion:', error.message);
+            }
+        }
+
+
+        async function handleSendSMSFunction(output) {
+            try {
+                const args = JSON.parse(output.arguments);
+                const content = args.ph;
+
+                console.log("handleSendSMSFunction args",args)
+                console.log("handleSendSMSFunction content",content)                
+                
+                const response = await fetch(`https://voice.sena.services/sendSMS/${encodeURIComponent(content)}`);
+                console.log("response",response)
+                const data = await response.json();    
+                console.log("data",data)            
+                
+                sendFunctionOutput(output.call_id, {
+                    about_sena: data.content || 'No data available'
+                });
+                
+                sendResponseCreate();
+            } catch (error) {
+                showError('Error handling about handleSendSMSFunction: ' + error.message);
+            }
+        }
+    
+        function handleFunctionCall(output) {
+            if (output?.type === "function_call") {
+
+                if (output?.name === "get_weather" && output?.call_id) {
+                    console.log('Weather function call found:', output);
+                    handleWeatherFunction(output);
+
+                } else if (output?.name === "get_about_sena" && output?.call_id) {
+                    console.log('About SENA function call found:', output);
+                    handleAboutSenaFunction(output);
+                }
+                else if (output?.name === "sendMail" && output?.call_id) {
+                    console.log('sendMail function call found:', output);
+                    handleSendMailFunction(output);
+                }
+                else if (output?.name === "sendSMS" && output?.call_id) {
+                    console.log('sendSMS function call found:', output);
+                    handleSendSMSFunction(output);
+                }
+            }
+        }
+    
+        function handleMessage(event) {
+            try {
+                const message = JSON.parse(event.data);
+                console.log('Received message:', message);
+                
+                switch (message.type) {
+                    case "response.done":                        
+                        handleTranscript(message);
+                        const output = message.response?.output?.[0];
+                        saveGPTResposeToBackEnd(output)
+                        if (output) {
+                            handleFunctionCall(output);
+                            break;
+                        }                            
+
+                    case "conversation.item.input_audio_transcription.completed": // New case added
+                        handleAudioTranscriptionComplete(message);
+                        break;
+
+                    default:
+                        console.log('Unhandled message type:', message.type);
+                }
+            } catch (error) {
+                showError('Error processing message: ' + error.message);
+            }
+        }
+                
+        async function setupAudio() {
+            const audioEl = document.createElement("audio");
+            audioEl.autoplay = true;
+            peerConnection.ontrack = e => audioEl.srcObject = e.streams[0];
+            
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            peerConnection.addTrack(audioStream.getTracks()[0]);
+           
+        }
+    
+        function setupDataChannel() {
+            dataChannel = peerConnection.createDataChannel("oai-events");
+            dataChannel.onopen = onDataChannelOpen;
+            dataChannel.addEventListener("message", handleMessage);
+        }
+    
+        function sendSessionUpdate() {
+            const sessionUpdateEvent = {
+                "type": "session.update",
+                "session": {
+                "input_audio_transcription": {
+                    "model": "whisper-1"
+                    },
+                    "tools": [{
+                        "type": "function",
+                        "name": "get_weather",
+                        "description": "Get the current weather. Works only for Earth",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "location": { "type": "string" }
+                            },
+                            "required": ["location"]
+                        }
+                    }, 
+                    // {
+                    //     "type": "function",
+                    //     "name": "get_about_sena",
+                    //     "description": "if the question 'who is the owner of Sena' is asked then add owner to context",
+                    //     "parameters": {
+                    //         "type": "object",
+                    //         "properties": {
+                    //             "content": { "type": "string" }
+                    //         },
+                    //         "required": ["content"]
+                    //     }
+                    // },
+                    // {
+                    //     "type": "function",
+                    //     "name": "sendMail",
+                    //     "description": "If the user says 'Email Id is', then get the email id",
+                    //     "parameters": {
+                    //         "type": "object",
+                    //         "properties": {
+                    //             "emailId": { "type": "string" }
+                    //         },
+                    //         "required": ["emailId"]
+                    //     },
+                    // },
+                    // {
+                    //     "type": "function",
+                    //     "name": "sendSMS",
+                    //     "description": "Get only contact number from user",
+                    //     "parameters": {
+                    //         "type": "object",
+                    //         "properties": {
+                    //             "ph": { "type": "string" }
+                    //         },
+                    //         "required": ["ph"]
+                    //     },
+                    // }
+
+                    ],
+                    "tool_choice": "auto"
+                }
+            };
+            sendMessage(sessionUpdateEvent);
+        }
+    
+        function sendInitialMessage() {
+            const conversationMessage = {
+                "type": "conversation.item.create",
+                "previous_item_id": null,
+                "item": {
+                    "id": "msg_" + Date.now(),
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": "Start with the greeting, you must talk only in ENGLISH."
+                    }]
+                }
+            };
+            sendMessage(conversationMessage);
+        }
+    
+        function sendFunctionOutput(callId, data) {
+            const responseMessage = {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": callId,
+                    "output": JSON.stringify(data)
+                }
+            };
+            sendMessage(responseMessage);
+        }
+    
+        function sendResponseCreate() {
+            sendMessage({ "type": "response.create" });
+        }
+    
+        function sendMessage(message) {
+            if (dataChannel?.readyState === "open") {
+                dataChannel.send(JSON.stringify(message));
+                console.log('Sent message:', message);
+            }
+        }
+    
+        function onDataChannelOpen() {
+            sendSessionUpdate();
+            sendInitialMessage();
+        }
+    
+        async function init() {
+            startButton.disabled = true;
+            
+            try {
+                //updateStatus('Initializing...');
+                
+                const tokenResponse = await fetch("https://voice.sena.services/session");
+                const data = await tokenResponse.json();
+                const EPHEMERAL_KEY = data.client_secret.value;
+    
+                peerConnection = new RTCPeerConnection();
+                await setupAudio();
+                setupDataChannel();
+                startButton.classList.add('hidden')
+                stopButton.classList.remove('hidden')
+
+                
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+    
+                const baseUrl = "https://api.openai.com/v1/realtime";
+                const model = "gpt-4o-mini-realtime-preview-2024-12-17";
+                const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+                    method: "POST",
+                    body: offer.sdp,
+                    headers: {
+                        Authorization: `Bearer ${EPHEMERAL_KEY}`,
+                        "Content-Type": "application/sdp"
+                    },
+                });
+
+                const answer = {
+                    type: "answer",
+                    sdp: await sdpResponse.text(),
+                };
+                
+                   
+               
+                await peerConnection.setRemoteDescription(answer);
+    
+                waveAnimation.forEach(wave => {
+                    wave.classList.toggle('hidden');
+                });
+                //updateStatus('Connected');
+                stopButton.disabled = false;
+                //hideError();
+    
+            } catch (error) {
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                //showError('Error: ' + error.message);
+                console.error('Initialization error:', error);
+                //updateStatus('Failed to connect');
+            }
+        }
+    
+        function stopRecording() {
+            triggerMail();
+            if (peerConnection) {                
+                peerConnection.close();
+                peerConnection = null;
+            }
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+                audioStream = null;
+            }
+            if (dataChannel) {
+                dataChannel.close();
+                dataChannel = null;
+            }
+            startButton.disabled = false;
+            stopButton.disabled = true;
+            stopButton.classList.add('hidden')
+            startButton.classList.remove('hidden')
+            waveAnimation.forEach(wave => {
+                wave.classList.add('hidden');
+            });
+            mute.classList.remove('hidden');
+                unmute.classList.add('hidden');
+            //updateStatus('Ready to start');
+        }
+    
+        /*function updateStatus(message) {
+            statusDiv.textContent = message;
+        }
+    
+        function showError(message) {
+            errorDiv.style.display = 'block';
+            errorDiv.textContent = message;
+        }
+    
+        function hideError() {
+            errorDiv.style.display = 'none';
+        }*/
+    
+        startButton.addEventListener('click', init);
+        stopButton.addEventListener('click', stopRecording);
+        showTranscription.addEventListener('click',(e)=>{
+            transcriptionContainer.classList.remove('hidden')
+           
+        });
+        closeTranscription.addEventListener('click',()=>{
+            transcriptionContainer.classList.add('hidden')
+        })
+
+        mute.addEventListener('click',toggleMute)
+        unmute.addEventListener('click',toggleMute)
+
+        
+       
+
+        aboutSenaButton.addEventListener('click', () => {
+            const conversationMessage = {
+                "type": "conversation.item.create",
+                "previous_item_id": null,
+                "item": {
+                    "id": "msg_" + Date.now(),
+                    "type": "message",
+                    "role": "user",
+                    "content": [{
+                        "type": "input_text",
+                        "text": "Tell me about SENA"
+                    }]
+                }
+            };
+            sendMessage(conversationMessage);
+        });
+        document.addEventListener('DOMContentLoaded', () => updateStatus('Ready to start'));
+    </script>
+    </body>
+</html>
